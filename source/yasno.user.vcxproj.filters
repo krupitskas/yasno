@@ -20,6 +20,12 @@
     <ClCompile Include="src\texture.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="src\camera.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\buffers.h">
@@ -41,6 +47,12 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="headers\texture.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\camera.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\model.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

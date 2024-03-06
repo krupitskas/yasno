@@ -1,6 +1,7 @@
 ﻿#include "core.h"
 
 #include "texture.hpp"
+#include "model.hpp"
 
 using namespace Engine;
 
@@ -31,6 +32,8 @@ int main()
 	}
 
 	const auto texture = yasn::loadTexture();
+
+	yasn::loadGltfModel();
 
 	Vertex vertices[] = {
 		{ glm::vec3( 0.5f, 0.5f, 0.0f ),	glm::vec4( 0.9f, 0.8f, 0.2f, 1.0f ), glm::vec2( 1.0f , 1.0f ) }, // Top right
@@ -75,10 +78,8 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, texture);
 		Buffers::useVAO( vaoID );
 		shader->use();
-		//glDrawArrays(GL_TRIANGLES, 0, vertexCount);
 		glDrawElements( GL_TRIANGLES, indicesLen, GL_UNSIGNED_INT, 0 );
 
-		// Swap buffers & Handle window events
 		glfwSwapBuffers( Window::nativeWindow );
 		glfwPollEvents();
 	}

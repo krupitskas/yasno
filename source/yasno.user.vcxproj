@@ -155,17 +155,21 @@
   <ItemGroup>
     <ClCompile Include="headers\glad.c" />
     <ClCompile Include="src\buffers.cpp" />
+    <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\input.cpp" />
+    <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\texture.cpp" />
     <ClCompile Include="src\window.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="headers\camera.hpp" />
     <ClInclude Include="headers\core.h" />
     <ClInclude Include="headers\buffers.h" />
     <ClInclude Include="headers\data.h" />
     <ClInclude Include="headers\input.h" />
+    <ClInclude Include="headers\model.hpp" />
     <ClInclude Include="headers\shader.h" />
     <ClInclude Include="headers\texture.hpp" />
     <ClInclude Include="headers\window.h" />
