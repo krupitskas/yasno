@@ -1,5 +1,7 @@
 ﻿#include "core.h"
 
+#include "texture.hpp"
+
 using namespace Engine;
 
 void terminateGLFW();
@@ -28,14 +30,13 @@ int main()
 		return -1;
 	}
 
-	// Create vertices for a square
-	// Update Vertex in shader.h to add more attributes
+	const auto texture = yasn::loadTexture();
+
 	Vertex vertices[] = {
-		// Postion							// Color
-		{ glm::vec3( 0.5f, -0.5f, 0.0f ),		glm::vec4( 0.9f, 0.8f, 0.2f, 1.0f ) },	// 0 Bottom Right
-		{ glm::vec3( 0.5f, 0.5f, 0.0f ),		glm::vec4( 0.2f, 0.9f, 0.8f, 1.0f ) },	// 1 Top Right
-		{ glm::vec3( -0.5f, 0.5f, 0.0f ),		glm::vec4( 0.8f, 0.2f, 0.9f, 1.0f ) },	// 2 Top Left
-		{ glm::vec3( -0.5f, -0.5f, 0.0f ),	glm::vec4( 0.8f, 0.9f, 0.2f, 1.0f ) },	// 3 Bottom Left
+		{ glm::vec3( 0.5f, 0.5f, 0.0f ),	glm::vec4( 0.9f, 0.8f, 0.2f, 1.0f ), glm::vec2( 1.0f , 1.0f ) }, // Top right
+		{ glm::vec3( 0.5f, -0.5f, 0.0f ),	glm::vec4( 0.2f, 0.9f, 0.8f, 1.0f ), glm::vec2( 1.0f , 0.0f ) }, // Bottom right
+		{ glm::vec3( -0.5f, -0.5f, 0.0f ),	glm::vec4( 0.8f, 0.2f, 0.9f, 1.0f ), glm::vec2( 0.0f , 0.0f ) }, // Bottom left
+		{ glm::vec3( -0.5f, 0.5f, 0.0f ),	glm::vec4( 0.8f, 0.9f, 0.2f, 1.0f ), glm::vec2( 0.0f , 1.0f ) }, // Top left
 	};
 	// Automaticall calculate required data
 	GLuint vertexLen = sizeof( Vertex ) / sizeof( float );
@@ -57,8 +58,9 @@ int main()
 	GLuint bindingIndex = 0;
 	Buffers::createVBO( vaoID, verticesByteSize, vertices, bindingIndex, vertexLen, usage );
 	Buffers::createEBO( vaoID, indicesByteSize, indices, usage );
-	Buffers::addVertexAttrib( vaoID, 0, 3, offsetof( Vertex, position ), bindingIndex );		// Position
+	Buffers::addVertexAttrib( vaoID, 0, 3, offsetof( Vertex, position ), bindingIndex );	// Position
 	Buffers::addVertexAttrib( vaoID, 1, 4, offsetof( Vertex, color ), bindingIndex );		// Color
+	Buffers::addVertexAttrib( vaoID, 2, 2, offsetof( Vertex, texCoord ), bindingIndex );		// Color
 
 	// Set clear color
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
@@ -66,13 +68,11 @@ int main()
 	// Main loop
 	while( !glfwWindowShouldClose( Window::nativeWindow ) )
 	{
-// Clear the screen
 		glClear( GL_COLOR_BUFFER_BIT );
 
-		// Handle input
 		Input::handleKeyInput();
 
-		// Render
+		glBindTexture(GL_TEXTURE_2D, texture);
 		Buffers::useVAO( vaoID );
 		shader->use();
 		//glDrawArrays(GL_TRIANGLES, 0, vertexCount);

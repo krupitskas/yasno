@@ -17,6 +17,9 @@
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\texture.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\buffers.h">
@@ -35,6 +38,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="headers\window.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\texture.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
