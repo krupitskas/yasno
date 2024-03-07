@@ -3,6 +3,9 @@
 #include "texture.hpp"
 #include "model.hpp"
 
+#include <glm/glm.hpp>
+#include <glm/trigonometric.hpp>
+
 using namespace Engine;
 
 void terminateGLFW();
@@ -14,7 +17,7 @@ int main()
 	const bool fullScreenMode = false;
 
 	// Create Window
-	const bool success = Window::createWindow( windowWidth, windowHeight, "Yasno", fullScreenMode );
+	const bool success = Window::createWindow( windowWidth, windowHeight, "yasno", fullScreenMode );
 	if( !success ) return -1;
 
 	// Initialize shader
@@ -34,6 +37,13 @@ int main()
 	const auto texture = yasn::loadTexture();
 
 	yasn::loadGltfModel();
+
+	glm::mat4 view;
+	view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), 
+						glm::vec3(0.0f, 0.0f, 0.0f), 
+						glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)windowWidth/(float)windowHeight, 0.1f, 100.0f);
+	glm::mat4 model(1.0);
 
 	Vertex vertices[] = {
 		{ glm::vec3( 0.5f, 0.5f, 0.0f ),	glm::vec4( 0.9f, 0.8f, 0.2f, 1.0f ), glm::vec2( 1.0f , 1.0f ) }, // Top right
@@ -77,6 +87,9 @@ int main()
 
 		glBindTexture(GL_TEXTURE_2D, texture);
 		Buffers::useVAO( vaoID );
+		shader->setMat4("model", glm::value_ptr(model));
+		shader->setMat4("view", glm::value_ptr(view));
+		shader->setMat4("projection", glm::value_ptr(proj));
 		shader->use();
 		glDrawElements( GL_TRIANGLES, indicesLen, GL_UNSIGNED_INT, 0 );
 
