@@ -26,6 +26,9 @@
     <ClCompile Include="src\model.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="src\material.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\buffers.h">
@@ -53,6 +56,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="headers\model.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\material.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

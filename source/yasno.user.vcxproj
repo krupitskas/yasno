@@ -157,6 +157,7 @@
     <ClCompile Include="src\buffers.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\input.cpp" />
+    <ClCompile Include="src\material.cpp" />
     <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\texture.cpp" />
@@ -169,6 +170,7 @@
     <ClInclude Include="headers\buffers.h" />
     <ClInclude Include="headers\data.h" />
     <ClInclude Include="headers\input.h" />
+    <ClInclude Include="headers\material.hpp" />
     <ClInclude Include="headers\model.hpp" />
     <ClInclude Include="headers\shader.h" />
     <ClInclude Include="headers\texture.hpp" />

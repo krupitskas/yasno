@@ -34,12 +34,13 @@ int main()
 		return -1;
 	}
 
-	const auto texture = yasn::loadTexture();
+	//const auto texture = yasn::loadTexture();
+	const auto hdrTexture = yasn::loadHdrTexture();
 
 	yasn::loadGltfModel();
 
 	glm::mat4 view;
-	view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), 
+	view = glm::lookAt(glm::vec3(0.0f, 0.0f, 1.0f), 
 						glm::vec3(0.0f, 0.0f, 0.0f), 
 						glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)windowWidth/(float)windowHeight, 0.1f, 100.0f);
@@ -85,7 +86,7 @@ int main()
 
 		Input::handleKeyInput();
 
-		glBindTexture(GL_TEXTURE_2D, texture);
+		glBindTexture(GL_TEXTURE_2D, hdrTexture);
 		Buffers::useVAO( vaoID );
 		shader->setMat4("model", glm::value_ptr(model));
 		shader->setMat4("view", glm::value_ptr(view));
