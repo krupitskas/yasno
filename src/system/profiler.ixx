@@ -35,8 +35,8 @@ export namespace ysn
 		{
 		#ifdef SUPERLUMINAL_API_EXIST
 			PerformanceAPI_EndEvent();
+		#endif
 		}
-	#endif
 	};
 
 }

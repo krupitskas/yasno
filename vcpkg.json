@@ -15,7 +15,6 @@
         "stb",
         "imguizmo",
         "wil",
-        "aixlog",
         "d3d12-memory-allocator"
     ]
 }

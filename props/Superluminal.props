@@ -6,20 +6,20 @@
             <AdditionalIncludeDirectories>$(SUPERLUMINAL_API_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
         </ClCompile>
     </ItemDefinitionGroup>
-        <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64' And '$(SUPERLUMINAL_API_PATH)' != ''">
         <Link>
             <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
             <AdditionalLibraryDirectories>$(SUPERLUMINAL_API_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
             <AdditionalDependencies>PerformanceAPI_MDd.lib;%(AdditionalDependencies)</AdditionalDependencies>
         </Link>
     </ItemDefinitionGroup>
-    <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64' And '$(SUPERLUMINAL_API_PATH)' != ''">
         <Link>
             <AdditionalLibraryDirectories>$(SUPERLUMINAL_API_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
             <AdditionalDependencies>PerformanceAPI_MD.lib;%(AdditionalDependencies)</AdditionalDependencies>
         </Link>
     </ItemDefinitionGroup>
-    <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">
+    <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64' And '$(SUPERLUMINAL_API_PATH)' != ''">
         <Link>
             <AdditionalLibraryDirectories>$(SUPERLUMINAL_API_PATH)\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
             <AdditionalDependencies>PerformanceAPI_MD.lib;%(AdditionalDependencies)</AdditionalDependencies>
