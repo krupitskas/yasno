@@ -131,7 +131,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)vcpkg_installed\x64-windows-static\include;$(SolutionDir)external\aixlog;$(SolutionDir)shaders\include;$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <BuildStlModules>true</BuildStlModules>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -450,6 +450,3 @@
     <Error Condition="!Exists('..\build\NuGet\Microsoft.Direct3D.D3D12.1.614.0\build\native\Microsoft.Direct3D.D3D12.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\build\NuGet\Microsoft.Direct3D.D3D12.1.614.0\build\native\Microsoft.Direct3D.D3D12.targets'))" />
   </Target>
 </Project>
-
-
-

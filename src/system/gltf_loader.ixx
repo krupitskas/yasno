@@ -112,6 +112,19 @@ void FindAllSrgbTextures(std::unordered_set<int>& srgb_textures, const tinygltf:
 
 			srgb_textures.emplace(texture.source);
 		}
+
+		const tinygltf::TextureInfo& emissive = gltf_material.emissiveTexture;
+		if (emissive.index >= 0)
+		{
+			const tinygltf::Texture& texture = gltf_model.textures[emissive.index];
+
+			if (srgb_textures.contains(texture.source))
+			{
+				ysn::LogError << "Emissive texture sRGB search collision\n";
+			}
+
+			srgb_textures.emplace(texture.source);
+		}
 	}
 }
 

@@ -673,7 +673,10 @@ namespace ysn
 		wil::com_ptr<ID3D12Resource> scene_color,
 		wil::com_ptr<ID3D12Resource> camera_buffer)
 	{
-		ID3D12DescriptorHeap* ppHeaps[] = { renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
+		ID3D12DescriptorHeap* ppHeaps[] = {
+			renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
+			renderer->GetSamplerDescriptorHeap()->GetHeapPtr(),
+		};
 		command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 		CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(

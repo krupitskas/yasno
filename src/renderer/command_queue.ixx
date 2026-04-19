@@ -254,7 +254,7 @@ namespace ysn
 			submit_lists.push_back(m_cmd_list_queue[i].get());
 		}
 
-		m_command_queue->ExecuteCommandLists(submit_lists.size(), submit_lists.data());
+		m_command_queue->ExecuteCommandLists(static_cast<UINT>(submit_lists.size()), submit_lists.data());
 
 		const auto signal_result = Signal();
 

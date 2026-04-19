@@ -143,16 +143,16 @@ namespace ysn
 
 		ID3D12DescriptorHeap* ppHeaps[] = { renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
 
-		{
-			CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-				pass_input.scene_color_buffer.get(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET,
-				D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			command_list->ResourceBarrier(1, &barrier);
-		}
-
 		if (is_pass_active)
 		{
+			{
+				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+					pass_input.scene_color_buffer.get(),
+					D3D12_RESOURCE_STATE_RENDER_TARGET,
+					D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				command_list->ResourceBarrier(1, &barrier);
+			}
+
 			const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
 			if (!pso.has_value())
 				return false;
