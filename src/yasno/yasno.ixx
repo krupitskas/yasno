@@ -490,7 +490,7 @@ namespace ysn
 
 		{
 			LoadingParameters loading_parameters;
-			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 
 		{
@@ -501,7 +501,7 @@ namespace ysn
 		{
 			LoadingParameters loading_parameters;
 			loading_parameters.model_modifier = XMMatrixScaling(0.5f, 0.5f, 0.5f);
-			// load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
+			 load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
 		}
 
 		//{
@@ -777,7 +777,9 @@ namespace ysn
 
 		{
 			LoadTextureParameters parameter;
-			parameter.filename = "assets/HDRI/newport_loft.hdr";
+			//parameter.filename = "assets/HDRI/newport_loft.hdr";
+			parameter.filename = "assets/HDRI/drackenstein_quarry_puresky_4k.hdr";
+			
 			parameter.command_list = command_list;
 			parameter.generate_mips = false;
 			parameter.is_srgb = false;
