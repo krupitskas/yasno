@@ -527,9 +527,9 @@ namespace ysn
 		return L"";
 	}
 
-#ifndef YSN_RELEASE
 	std::vector<ShaderModificationData> ShaderStorage::VerifyAnyShaderChanged()
 	{
+#ifndef YSN_RELEASE
 		std::vector<ShaderModificationData> result;
 
 		for (const auto& [shader_path, data] : m_shaders_modified_data)
@@ -551,8 +551,12 @@ namespace ysn
 		}
 
 		return result;
+#else
+		return {};
+#endif
 	}
 
+#ifndef YSN_RELEASE
 	std::optional<std::time_t> ShaderStorage::GetShaderModificationTime(const std::filesystem::path& shader_path)
 	{
 		struct stat result;
