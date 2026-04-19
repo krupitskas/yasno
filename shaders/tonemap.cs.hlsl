@@ -25,6 +25,8 @@ void main(uint3 threadId : SV_DispatchThreadID)
 	const float gamma = 2.2;
 	const float gamma_rcp = 1.0 / gamma;
 	const float3 hdr_source = HDRTexture[threadId.xy];
+	const float exposure = max(parameters.exposure, 0.0f);
+	const float3 hdr_exposed = hdr_source * exposure;
 
 	float3 ldr_result = 0;
 
@@ -32,15 +34,15 @@ void main(uint3 threadId : SV_DispatchThreadID)
 	// In normal world should be ifdef or different shader code (ubershader)
 	if (parameters.tonemap_method == 0) // None
 	{
-		ldr_result = hdr_source;
+		ldr_result = hdr_exposed;
 	}
 	else if (parameters.tonemap_method == 1) // Reinhard
 	{
-		ldr_result = 1.0f - exp(-hdr_source * parameters.exposure);
+		ldr_result = 1.0f - exp(-hdr_exposed);
 	}
 	else if(parameters.tonemap_method == 2) // Aces
 	{
-		ldr_result = ACESFilm(hdr_source);
+		ldr_result = ACESFilm(hdr_exposed);
 	}
 	else
 	{

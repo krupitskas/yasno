@@ -97,7 +97,7 @@ namespace ysn
 
 		tonemap_parameters->display_width = width;
 		tonemap_parameters->display_height = height;
-		tonemap_parameters->exposure = exposure;
+		tonemap_parameters->exposure = std::max(0.0f, exposure);
 		tonemap_parameters->tonemap_method = static_cast<uint32_t>(method);
 
 		parameters_buffer->Unmap(0, nullptr);

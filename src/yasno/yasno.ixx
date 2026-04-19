@@ -482,7 +482,7 @@ namespace ysn
 
 		{
 			LoadingParameters loading_parameters;
-			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 
 		{
@@ -492,8 +492,8 @@ namespace ysn
 
 		{
 			LoadingParameters loading_parameters;
-			loading_parameters.model_modifier = XMMatrixScaling(0.1f, 0.1f, 0.1f);
-			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
+			loading_parameters.model_modifier = XMMatrixScaling(0.5f, 0.5f, 0.5f);
+			// load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
 		}
 
 		//{
@@ -814,7 +814,7 @@ namespace ysn
 			LogError << "Can't initialize volumetric renderer\n";
 			return false;
 		}
-		
+
 
 		command_queue->CloseCommandList(command_list);
 
@@ -1195,6 +1195,8 @@ namespace ysn
 				if (kb.IsKeyDown(DirectX::Keyboard::R) && !m_is_raster_pressed)
 				{
 					m_is_raster = !m_is_raster;
+					m_rtx_frames_accumulated = 0;
+					m_reset_rtx_accumulation = true;
 					m_is_raster_pressed = true;
 				}
 
@@ -1366,7 +1368,12 @@ namespace ysn
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 215, 0, 255));
 					ImGui::Text("Pathtracing");
-					ImGui::Checkbox("Temporal Accumulation", &m_is_rtx_accumulation_enabled);
+					if (ImGui::Checkbox("Temporal Accumulation", &m_is_rtx_accumulation_enabled))
+					{
+						// Always restart accumulation history when toggling accumulation mode.
+						m_rtx_frames_accumulated = 0;
+						m_reset_rtx_accumulation = true;
+					}
 
 					ImGui::Text(std::format("Frames accumulated {}", m_rtx_frames_accumulated).c_str());
 
@@ -1441,9 +1448,9 @@ namespace ysn
 
 			command_queue->CloseCommandList(command_list);
 		}
-		
+
 		// Do it once
-		if(m_is_first_frame)
+		if (m_is_first_frame)
 		{
 			{
 				ConvertToCubemapParameters parameters;
@@ -1534,6 +1541,9 @@ namespace ysn
 				m_reset_rtx_accumulation = true;
 			}
 
+			// Refresh camera constants after updating accumulation counters to keep normalization in sync.
+			UpdateGpuCameraBuffer();
+
 			const auto cmd_list_res = command_queue->GetCommandList("RTX Pass");
 			if (!cmd_list_res)
 				return;
@@ -1599,7 +1609,7 @@ namespace ysn
 			VolumetricFogPassInput pass_input;
 			pass_input.camera_gpu_buffer = m_camera_gpu_buffer;
 			pass_input.scene_color_buffer = m_scene_color_buffer;
-			pass_input.scene_parameters_gpu_buffer = m_scene_parameters_gpu_buffer; 
+			pass_input.scene_parameters_gpu_buffer = m_scene_parameters_gpu_buffer;
 			pass_input.hdr_uav_descriptor_handle = m_hdr_uav_descriptor_handle;
 			pass_input.depth_srv = m_depth_srv_descriptor_handle;
 			pass_input.shadow_map_buffer = m_shadow_pass.shadow_map_buffer;

@@ -289,12 +289,12 @@ void RayGen()
 	if(camera.accumulation_enabled > 0)
 	{
 		// Temporal accumulation
-		float3 previous_color = accumulation_texture[pixel_xy].rgb;
-		float3 accumulated_color = radiance;
-		accumulated_color = previous_color + radiance;
+		float3 previous_color = (camera.reset_accumulation > 0) ? float3(0.0f, 0.0f, 0.0f) : accumulation_texture[pixel_xy].rgb;
+		float3 accumulated_color = previous_color + radiance;
 		accumulation_texture[pixel_xy] = float4(accumulated_color, 1.0f);
 
-		result_color = accumulated_color / ( camera.rtx_frames_accumulated + 1);
+		float sample_count = max((float)camera.rtx_frames_accumulated + 1.0f, 1.0f);
+		result_color = accumulated_color / sample_count;
 	}
 	else
 	{
