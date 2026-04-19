@@ -1474,6 +1474,7 @@ namespace ysn
 				ForwardPassRenderParameters render_parameters;
 				render_parameters.command_queue = command_queue;
 				render_parameters.cbv_srv_uav_heap = renderer->GetCbvSrvUavDescriptorHeap();
+				render_parameters.sampler_heap = renderer->GetSamplerDescriptorHeap();
 				render_parameters.scene_color_buffer = m_scene_color_buffer;
 				render_parameters.hdr_rtv_descriptor_handle = m_hdr_rtv_descriptor_handle;
 				render_parameters.dsv_descriptor_handle = m_depth_dsv_descriptor_handle;

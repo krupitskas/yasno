@@ -41,6 +41,7 @@ export namespace ysn
 	{
 		std::shared_ptr<CommandQueue> command_queue = nullptr;
 		std::shared_ptr<CbvSrvUavDescriptorHeap> cbv_srv_uav_heap = nullptr;
+		std::shared_ptr<SamplerDescriptorHeap> sampler_heap = nullptr;
 		wil::com_ptr<ID3D12Resource> scene_color_buffer = nullptr;
 		DescriptorHandle hdr_rtv_descriptor_handle;
 		DescriptorHandle dsv_descriptor_handle;
@@ -311,6 +312,7 @@ namespace ysn
 
 		ID3D12DescriptorHeap* pDescriptorHeaps[] = {
 			render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
+			render_parameters.sampler_heap->GetHeapPtr(),
 		};
 		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 		command_list->RSSetViewports(1, &render_parameters.viewport);
@@ -612,6 +614,7 @@ namespace ysn
 		{
 			ID3D12DescriptorHeap* pDescriptorHeaps[] = {
 				render_parameters.cbv_srv_uav_heap->GetHeapPtr(),
+				render_parameters.sampler_heap->GetHeapPtr(),
 			};
 			command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 			command_list->RSSetViewports(1, &render_parameters.viewport);
