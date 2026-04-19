@@ -39,6 +39,10 @@ constexpr uint GetGpuSize()
 #define OCCLUSION_ENABLED_BIT 3
 #define EMISSIVE_ENABLED_BIT 4
 
+#define AMBIENT_LIGHT_SOURCE_COLOR 0
+#define AMBIENT_LIGHT_SOURCE_CUBEMAP 1
+#define AMBIENT_LIGHT_SOURCE_RADIANCE 2
+
 // Default PBR material
 struct SurfaceShaderParameters
 {
@@ -82,8 +86,12 @@ struct GpuSceneParameters
     float directional_light_intensity;
     float ambient_light_intensity;
     uint shadows_enabled;
+    uint ambient_light_mode;
+    float4 ambient_light_color;
+    int ambient_cubemap_texture_index;
+    int ambient_radiance_texture_index;
 
-    uint pad[1];
+    uint pad[2];
 };
 CHECK_STRUCT_ALIGNMENT(GpuSceneParameters);
 

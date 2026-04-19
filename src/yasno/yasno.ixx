@@ -367,6 +367,14 @@ namespace ysn
 		scene_parameters_data->directional_light_intensity = m_render_scene.directional_light.intensity;
 		scene_parameters_data->ambient_light_intensity = m_render_scene.environment_light.intensity;
 		scene_parameters_data->shadows_enabled = (uint32_t)m_render_scene.directional_light.cast_shadow;
+		scene_parameters_data->ambient_light_mode = static_cast<uint32_t>(m_render_scene.environment_light.source);
+		scene_parameters_data->ambient_light_color = DirectX::XMFLOAT4(
+			m_render_scene.environment_light.color.x,
+			m_render_scene.environment_light.color.y,
+			m_render_scene.environment_light.color.z,
+			1.0f);
+		scene_parameters_data->ambient_cubemap_texture_index = static_cast<int>(m_cubemap_texture.srv.index);
+		scene_parameters_data->ambient_radiance_texture_index = static_cast<int>(m_radiance_cubemap_texture.srv.index);
 
 		m_scene_parameters_gpu_buffer->Unmap(0, nullptr);
 	}
@@ -1286,7 +1294,43 @@ namespace ysn
 				m_shadow_pass.UpdateLight(m_render_scene.directional_light);
 
 				ImGui::InputFloat("Intensity", &m_render_scene.directional_light.intensity, 0.0f, 1000.0f);
-				ImGui::InputFloat("Ambient Light Intensity", &m_render_scene.environment_light.intensity, 0.0f, 1000.0f);
+
+				bool ambient_changed = false;
+				ambient_changed |= ImGui::InputFloat("Ambient Light Intensity", &m_render_scene.environment_light.intensity, 0.0f, 1000.0f);
+
+				float ambient_color[3] = {
+					m_render_scene.environment_light.color.x,
+					m_render_scene.environment_light.color.y,
+					m_render_scene.environment_light.color.z,
+				};
+
+				if (ImGui::ColorEdit3("Ambient Light Color", ambient_color, ImGuiColorEditFlags_Float))
+				{
+					m_render_scene.environment_light.color.x = ambient_color[0];
+					m_render_scene.environment_light.color.y = ambient_color[1];
+					m_render_scene.environment_light.color.z = ambient_color[2];
+					ambient_changed = true;
+				}
+
+				{
+					const char* ambient_items[] = {
+						"Color",
+						"Cubemap",
+						"Radiance",
+					};
+					int ambient_source = static_cast<int>(m_render_scene.environment_light.source);
+					if (ImGui::Combo("Ambient Source", &ambient_source, ambient_items, IM_ARRAYSIZE(ambient_items)))
+					{
+						m_render_scene.environment_light.source = static_cast<decltype(m_render_scene.environment_light.source)>(ambient_source);
+						ambient_changed = true;
+					}
+				}
+
+				if (ambient_changed)
+				{
+					m_rtx_frames_accumulated = 0;
+					m_reset_rtx_accumulation = true;
+				}
 
 				{
 					const char* items[] = {

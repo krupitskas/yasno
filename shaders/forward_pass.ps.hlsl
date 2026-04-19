@@ -211,22 +211,36 @@ float4 main(RS2PS input) : SV_Target
 
 	{
 	    float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
-    
+     
 		float3 kS = F;
 		float3 kD = 1.0 - kS;
 		kD *= 1.0 - metalness;	  
-    
-		float3 irradiance	= g_input_irradiance.SampleLevel(g_linear_sampler, N, 0).rgb;
-		float3 diffuse      = irradiance * albedo.rgb;
 
-		const float MAX_REFLECTION_LOD = 7.0;
+		if (scene_parameters.ambient_light_mode == AMBIENT_LIGHT_SOURCE_COLOR)
+		{
+			const float3 ambient_color = scene_parameters.ambient_light_color.rgb * ibl_intensity;
+			ambient_diffuse = kD * albedo.rgb * ambient_color;
+			ambient_spec = kS * ambient_color * 0.25f;
+		}
+		else
+		{
+			float3 irradiance = g_input_irradiance.SampleLevel(g_linear_sampler, N, 0).rgb;
+			const float MAX_REFLECTION_LOD = 7.0;
+			float3 prefilteredColor = g_input_radiance.SampleLevel(g_linear_sampler, R, roughness * MAX_REFLECTION_LOD).rgb;
 
-		float3 prefilteredColor = g_input_radiance.SampleLevel(g_linear_sampler, R, roughness * MAX_REFLECTION_LOD).rgb;    
-		float2 brdf  = g_input_brdf.SampleLevel(g_linear_sampler, float2(max(dot(N, V), 0.0), roughness), 0).rg;
-		float3 spec = prefilteredColor * (F * brdf.x + brdf.y);
+			if (scene_parameters.ambient_light_mode == AMBIENT_LIGHT_SOURCE_CUBEMAP)
+			{
+				irradiance = g_input_cubemap.SampleLevel(g_linear_sampler, N, 0).rgb;
+				prefilteredColor = g_input_cubemap.SampleLevel(g_linear_sampler, R, 0).rgb;
+			}
 
-		ambient_diffuse = kD * diffuse * ibl_intensity;
-		ambient_spec = spec * ibl_intensity;
+			float3 diffuse = irradiance * albedo.rgb;
+			float2 brdf  = g_input_brdf.SampleLevel(g_linear_sampler, float2(max(dot(N, V), 0.0), roughness), 0).rg;
+			float3 spec = prefilteredColor * (F * brdf.x + brdf.y);
+
+			ambient_diffuse = kD * diffuse * ibl_intensity;
+			ambient_spec = spec * ibl_intensity;
+		}
 	}
 
 	const float shadow = scene_parameters.shadows_enabled ? ShadowCalculation(input.position_shadow_space, N, L) : 0.0f;

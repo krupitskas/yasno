@@ -115,6 +115,35 @@ float3 EvaluateDirectionalLight(float3 N, float3 V, float3 L, PTMaterialProperti
 	return (kD * albedo / PI + specular) * radiance * NdotL;
 }
 
+float3 EvaluateAmbientEnvironment(float3 ray_direction)
+{
+	const float ambient_intensity = max(scene_parameters.ambient_light_intensity, 0.0f);
+	if (ambient_intensity <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	if (scene_parameters.ambient_light_mode == AMBIENT_LIGHT_SOURCE_COLOR)
+	{
+		return scene_parameters.ambient_light_color.rgb * ambient_intensity;
+	}
+
+	int environment_texture_index = scene_parameters.ambient_cubemap_texture_index;
+	if (scene_parameters.ambient_light_mode == AMBIENT_LIGHT_SOURCE_RADIANCE)
+	{
+		environment_texture_index = scene_parameters.ambient_radiance_texture_index;
+	}
+
+	if (environment_texture_index >= 0)
+	{
+		TextureCube environment_texture = ResourceDescriptorHeap[environment_texture_index];
+		const float3 environment_value = environment_texture.SampleLevel(linear_sampler, ray_direction, 0.0f).rgb;
+		return environment_value * ambient_intensity;
+	}
+
+	return scene_parameters.ambient_light_color.rgb * ambient_intensity;
+}
+
 [shader("raygeneration")]
 void RayGen()
 {
@@ -145,7 +174,6 @@ void RayGen()
 
 	float3 radiance = float3(0.0f, 0.0f, 0.0f);
 	float3 throughput = float3(1.0f, 1.0f, 1.0f);
-	float3 sky_value = float3(10.0f, 10.0f, 10.0f) * max(scene_parameters.ambient_light_intensity, 0.0f);
 
 	uint rng_state = InitRNG(LaunchIndex, LaunchDimensions, camera.frame_number);
 
@@ -168,7 +196,7 @@ void RayGen()
 
 		if(!payload.has_hit())
 		{
-			radiance += throughput * sky_value; // TODO: Sample cubemap here?
+			radiance += throughput * EvaluateAmbientEnvironment(normalize(ray.Direction));
 			break;
 		}
 

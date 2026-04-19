@@ -1,6 +1,7 @@
 module;
 
 #include <DirectXMath.h>
+#include <cstdint>
 
 export module graphics.lights;
 
@@ -8,9 +9,18 @@ export module graphics.lights;
 
 export namespace ysn
 {
+	enum class AmbientLightSource : std::uint32_t
+	{
+		Color = 0,
+		Cubemap = 1,
+		Radiance = 2,
+	};
+
 	struct EnvironmentLight
 	{
 		float intensity = 0.25f;
+		DirectX::XMFLOAT3 color = { 1.0f, 1.0f, 1.0f };
+		AmbientLightSource source = AmbientLightSource::Cubemap;
 	};
 
 	struct DirectionalLight
