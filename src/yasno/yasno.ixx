@@ -1,6 +1,7 @@
 ﻿module;
 
 #include <DirectXMath.h>
+#include <SimpleMath.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <d3dx12.h>
@@ -481,7 +482,7 @@ namespace ysn
 
 		{
 			LoadingParameters loading_parameters;
-			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 
 		{
@@ -491,8 +492,8 @@ namespace ysn
 
 		{
 			LoadingParameters loading_parameters;
-			loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
+			//loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
 		}
 
 		//{
@@ -1264,9 +1265,21 @@ namespace ysn
 					m_render_scene.directional_light.direction.y,
 					m_render_scene.directional_light.direction.z };
 				ImGui::InputFloat3("Direction", dir);
-				m_render_scene.directional_light.direction.x = dir[0];
-				m_render_scene.directional_light.direction.y = dir[1];
-				m_render_scene.directional_light.direction.z = dir[2];
+
+				DirectX::SimpleMath::Vector3 light_dir = { dir[0], dir[1], dir[2] };
+				if (light_dir.LengthSquared() <= 0.00001f)
+				{
+					light_dir = { 0.1f, -1.0f, 0.45f };
+				}
+				light_dir.Normalize();
+
+				dir[0] = light_dir.x;
+				dir[1] = light_dir.y;
+				dir[2] = light_dir.z;
+
+				m_render_scene.directional_light.direction.x = light_dir.x;
+				m_render_scene.directional_light.direction.y = light_dir.y;
+				m_render_scene.directional_light.direction.z = light_dir.z;
 
 				m_shadow_pass.UpdateLight(m_render_scene.directional_light);
 
@@ -1294,6 +1307,11 @@ namespace ysn
 			if (ImGui::CollapsingHeader("Shadows"), ImGuiTreeNodeFlags_DefaultOpen)
 			{
 				ImGui::Checkbox("Shadows Enabled", &m_render_scene.directional_light.cast_shadow);
+				ImGui::SliderFloat("Shadow Extent", &m_shadow_pass.shadow_extent, 40.0f, 220.0f);
+				ImGui::SliderFloat("Shadow Follow Distance", &m_shadow_pass.shadow_follow_distance, 10.0f, 180.0f);
+				ImGui::SliderFloat("Shadow Eye Distance", &m_shadow_pass.shadow_eye_distance, 60.0f, 420.0f);
+				ImGui::SliderFloat("Shadow Near Plane", &m_shadow_pass.shadow_near_plane, 0.01f, 10.0f, "%.3f");
+				ImGui::SliderFloat("Shadow Far Plane", &m_shadow_pass.shadow_far_plane, 100.0f, 2000.0f);
 			}
 
 			if (ImGui::CollapsingHeader("Tonemapping"), ImGuiTreeNodeFlags_DefaultOpen)

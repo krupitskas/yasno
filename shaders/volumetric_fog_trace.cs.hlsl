@@ -78,14 +78,14 @@ void main(uint3 threadId : SV_DispatchThreadID)
 
 	const float dither_value = GetDitherValue(threadId.xy);
 
-	const int shadow_dim = 4096; // TODO: provide
+	uint shadow_width = 0;
+	uint shadow_height = 0;
+	ShadowMapTexture.GetDimensions(shadow_width, shadow_height);
 
 	// Fog parameters
 	float fog_density = 0.1f;
-	float3 fog_color = 1.0f;
 
 	float3 light_color = scene_parameters.directional_light_color.xyz * scene_parameters.directional_light_intensity;
-	float3 light_dir = scene_parameters.directional_light_direction.xyz;
 
 	// Accumulators
 	float3 fog_accum = float3(0, 0, 0); // Accumulated fog color
@@ -112,17 +112,18 @@ void main(uint3 threadId : SV_DispatchThreadID)
 		float light_visibility = 1.0f;
 
 		const bool inside_shadow_map =
+			shadow_width > 0 && shadow_height > 0 &&
 			projected_coordinate.x >= 0.0f && projected_coordinate.x <= 1.0f &&
 			projected_coordinate.y >= 0.0f && projected_coordinate.y <= 1.0f;
 
 		if (inside_shadow_map)
 		{
-			int2 texel_coords = int2(projected_coordinate.xy * float2(shadow_dim, shadow_dim));
-			texel_coords = clamp(texel_coords, int2(0, 0), int2(shadow_dim - 1, shadow_dim - 1));
+			int2 texel_coords = int2(projected_coordinate.xy * float2(shadow_width, shadow_height));
+			texel_coords = clamp(texel_coords, int2(0, 0), int2(shadow_width - 1, shadow_height - 1));
 
 			const float shadow_depth = ShadowMapTexture.Load(int3(texel_coords, 0)).r;
-			const float fragment_depth = projected_coordinate.z;
-			const float bias = 0.01f;
+			const float fragment_depth = saturate(projected_coordinate.z);
+			const float bias = 0.0015f;
 			const bool in_shadow = fragment_depth - bias > shadow_depth;
 
 			// If sample point is in shadow, directional light contribution should be blocked.

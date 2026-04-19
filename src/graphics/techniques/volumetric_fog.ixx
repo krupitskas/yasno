@@ -153,6 +153,14 @@ namespace ysn
 				command_list->ResourceBarrier(1, &barrier);
 			}
 
+			{
+				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+					pass_input.shadow_map_buffer.buffer.get(),
+					D3D12_RESOURCE_STATE_DEPTH_WRITE,
+					D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+				command_list->ResourceBarrier(1, &barrier);
+			}
+
 			const std::optional<Pso> pso = renderer->GetPso(m_pso_id);
 			if (!pso.has_value())
 				return false;
@@ -173,6 +181,14 @@ namespace ysn
 				UINT(std::ceil(pass_input.backbuffer_width / (float)VolumetricFogDispatchX)),
 				UINT(std::ceil(pass_input.backbuffer_height / (float)VolumetricFogDispatchY)),
 				VolumetricFogDispatchZ);
+
+			{
+				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+					pass_input.shadow_map_buffer.buffer.get(),
+					D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+					D3D12_RESOURCE_STATE_DEPTH_WRITE);
+				command_list->ResourceBarrier(1, &barrier);
+			}
 
 			{
 				CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(

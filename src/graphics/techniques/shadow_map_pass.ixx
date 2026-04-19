@@ -50,6 +50,11 @@ export namespace ysn
 
 		// Shadow Map resources
 		std::uint32_t ShadowMapDimension = 4096;
+		float shadow_follow_distance = 55.0f;
+		float shadow_eye_distance = 220.0f;
+		float shadow_extent = 110.0f;
+		float shadow_near_plane = 0.1f;
+		float shadow_far_plane = 700.0f;
 
 		XMMATRIX shadow_matrix;
 
@@ -61,9 +66,11 @@ export namespace ysn
 	private:
 		bool InitializeShadowMapBuffer(std::shared_ptr<ysn::DxRenderer> p_renderer);
 		void InitializeOrthProjection(SimpleMath::Vector3 direction);
+		void UpdateShadowMatrixForCamera(const RenderScene& render_scene);
 		bool InitializeCamera(std::shared_ptr<ysn::DxRenderer> p_renderer);
 
 		wil::com_ptr<ID3D12Resource> m_camera_buffer;
+		SimpleMath::Vector3 m_light_direction = { 0.1f, -1.0f, 0.45f };
 	};
 }
 
@@ -71,6 +78,24 @@ module :private;
 
 namespace ysn
 {
+	namespace
+	{
+		DirectX::SimpleMath::Vector3 NormalizeOrDefault(
+			const DirectX::SimpleMath::Vector3& value,
+			const DirectX::SimpleMath::Vector3& fallback)
+		{
+			if (value.LengthSquared() <= 0.00001f)
+			{
+				return fallback;
+			}
+
+			auto normalized = value;
+			normalized.Normalize();
+
+			return normalized;
+		}
+	}
+
 	bool ShadowMapPass::InitializeCamera(std::shared_ptr<DxRenderer> p_renderer)
 	{
 		D3D12_HEAP_PROPERTIES heapProperties = {};
@@ -104,6 +129,7 @@ namespace ysn
 	{
 		InitializeShadowMapBuffer(p_renderer);
 		InitializeCamera(p_renderer);
+		InitializeOrthProjection(m_light_direction);
 	}
 
 	bool ShadowMapPass::CompilePrimitivePso(ysn::Primitive& primitive, std::vector<Material> materials)
@@ -159,11 +185,10 @@ namespace ysn
 		}
 
 		pso_desc.AddShader({ ShaderType::Vertex, VfsPath(L"shaders/forward_pass.vs.hlsl"), {L"SHADOW_PASS"} });
-		pso_desc.AddShader({ ShaderType::Pixel, VfsPath(L"shaders/shadow_pass.ps.hlsl") });
 
 		D3D12_DEPTH_STENCIL_DESC depth_stencil_desc = {};
 		depth_stencil_desc.DepthEnable = true;
-		depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+		depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 		depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 
 		pso_desc.SetDepthStencilState(depth_stencil_desc);
@@ -178,7 +203,7 @@ namespace ysn
 
 		D3D12_RASTERIZER_DESC raster_desc = {};
 		raster_desc.FillMode = D3D12_FILL_MODE_SOLID;
-		raster_desc.CullMode = D3D12_CULL_MODE_FRONT;
+		raster_desc.CullMode = D3D12_CULL_MODE_NONE;
 
 		pso_desc.SetRasterizerState(raster_desc);
 		pso_desc.SetBlendState(blend_desc);
@@ -200,7 +225,7 @@ namespace ysn
 				AssertMsg(false, "Unsupported primitive topology");
 		}
 
-		pso_desc.SetRenderTargetFormat(DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_D32_FLOAT);
+		pso_desc.SetDepthTargetFormat(DXGI_FORMAT_D32_FLOAT);
 
 		auto result_pso = renderer->BuildPso(pso_desc);
 
@@ -221,7 +246,7 @@ namespace ysn
 
 		D3D12_CLEAR_VALUE optimizedClearValue = {};
 		optimizedClearValue.Format = ShadowMapFormat;
-		optimizedClearValue.DepthStencil = { 0.0f, 0 };
+		optimizedClearValue.DepthStencil = { 1.0f, 0 };
 
 		const CD3DX12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
@@ -265,15 +290,93 @@ namespace ysn
 
 	void ShadowMapPass::InitializeOrthProjection(DirectX::SimpleMath::Vector3 direction)
 	{
-		DirectX::XMMATRIX projection = DirectX::XMMatrixOrthographicOffCenterRH(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 20.f);
-		DirectX::XMMATRIX view = DirectX::XMMatrixLookAtRH(-direction, DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::Up);
+		direction = NormalizeOrDefault(direction, DirectX::SimpleMath::Vector3{ 0.1f, -1.0f, 0.45f });
+
+		const float extent = 100.0f;
+		const float eye_distance = 175.0f;
+		const DirectX::SimpleMath::Vector3 frustum_center = DirectX::SimpleMath::Vector3::Zero;
+		const DirectX::SimpleMath::Vector3 eye = frustum_center - direction * eye_distance;
+		const auto up = std::abs(direction.Dot(DirectX::SimpleMath::Vector3::Up)) > 0.99f
+			? DirectX::SimpleMath::Vector3{ 1.0f, 0.0f, 0.0f }
+			: DirectX::SimpleMath::Vector3::Up;
+
+		DirectX::XMMATRIX projection =
+			DirectX::XMMatrixOrthographicOffCenterRH(-extent, extent, -extent, extent, 0.1f, 500.0f);
+		DirectX::XMMATRIX view = DirectX::XMMatrixLookAtRH(eye, frustum_center, up);
 		shadow_matrix = view * projection;
 	}
 
 	void ShadowMapPass::UpdateLight(const DirectionalLight& directional_light)
 	{
-		InitializeOrthProjection(
-			SimpleMath::Vector3{ directional_light.direction.x, directional_light.direction.y, directional_light.direction.z });
+		m_light_direction = NormalizeOrDefault(
+			SimpleMath::Vector3{ directional_light.direction.x, directional_light.direction.y, directional_light.direction.z },
+			DirectX::SimpleMath::Vector3{ 0.1f, -1.0f, 0.45f });
+
+		InitializeOrthProjection(m_light_direction);
+	}
+
+	void ShadowMapPass::UpdateShadowMatrixForCamera(const RenderScene& render_scene)
+	{
+		if (!render_scene.camera)
+		{
+			return;
+		}
+
+		const float follow_distance = std::max(0.0f, shadow_follow_distance);
+		const float eye_distance = std::max(1.0f, shadow_eye_distance);
+		const float extent = std::max(1.0f, shadow_extent);
+		const float near_plane = std::max(0.01f, shadow_near_plane);
+		const float far_plane = std::max(near_plane + 1.0f, shadow_far_plane);
+
+		const auto camera_position = SimpleMath::Vector3(render_scene.camera->GetPosition());
+		const auto camera_forward =
+			NormalizeOrDefault(SimpleMath::Vector3(render_scene.camera->GetForwardVector()), SimpleMath::Vector3{ 0.0f, 0.0f, 1.0f });
+		const auto focus_position = camera_position + camera_forward * follow_distance;
+
+		const auto light_direction = NormalizeOrDefault(m_light_direction, SimpleMath::Vector3{ 0.1f, -1.0f, 0.45f });
+		const auto light_up = std::abs(light_direction.Dot(SimpleMath::Vector3::Up)) > 0.99f
+			? SimpleMath::Vector3{ 1.0f, 0.0f, 0.0f }
+			: SimpleMath::Vector3::Up;
+		auto light_eye = focus_position - light_direction * eye_distance;
+
+		auto view = DirectX::XMMatrixLookAtRH(light_eye, focus_position, light_up);
+
+		// Stabilize directional shadows: snap projection center to shadow texel grid to reduce shimmer.
+		const float texel_world_size = (extent * 2.0f) / static_cast<float>(ShadowMapDimension);
+		if (texel_world_size > 0.0f)
+		{
+			const auto focus_light_space_v = DirectX::XMVector3TransformCoord(focus_position, view);
+			DirectX::SimpleMath::Vector3 focus_light_space;
+			DirectX::XMStoreFloat3(&focus_light_space, focus_light_space_v);
+
+			const float snapped_x = std::floor(focus_light_space.x / texel_world_size + 0.5f) * texel_world_size;
+			const float snapped_y = std::floor(focus_light_space.y / texel_world_size + 0.5f) * texel_world_size;
+
+			const DirectX::SimpleMath::Vector3 delta_light = {
+				snapped_x - focus_light_space.x,
+				snapped_y - focus_light_space.y,
+				0.0f
+			};
+
+			const auto inv_view = DirectX::XMMatrixInverse(nullptr, view);
+			const auto delta_world_v = DirectX::XMVector3TransformNormal(delta_light, inv_view);
+			DirectX::SimpleMath::Vector3 delta_world;
+			DirectX::XMStoreFloat3(&delta_world, delta_world_v);
+
+			light_eye += delta_world;
+			const auto snapped_focus = focus_position + delta_world;
+			view = DirectX::XMMatrixLookAtRH(light_eye, snapped_focus, light_up);
+		}
+
+		const auto projection = DirectX::XMMatrixOrthographicOffCenterRH(
+			-extent,
+			extent,
+			-extent,
+			extent,
+			near_plane,
+			far_plane);
+
+		shadow_matrix = view * projection;
 	}
 
 	bool ShadowMapPass::Render(const RenderScene& render_scene, const ShadowRenderParameters& parameters)
@@ -292,7 +395,9 @@ namespace ysn
 		};
 		command_list->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 
-		command_list->ClearDepthStencilView(shadow_map_buffer.dsv_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
+		UpdateShadowMatrixForCamera(render_scene);
+
+		command_list->ClearDepthStencilView(shadow_map_buffer.dsv_handle.cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 		command_list->RSSetViewports(1, &Viewport);
 		command_list->RSSetScissorRects(1, &ScissorRect);
 		command_list->OMSetRenderTargets(0, nullptr, FALSE, &shadow_map_buffer.dsv_handle.cpu);

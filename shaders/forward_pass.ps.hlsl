@@ -31,49 +31,63 @@ Texture2D	g_input_brdf			: register(t6);
 SamplerState g_shadow_sampler		: register(s0);
 SamplerState g_linear_sampler		: register(s1);
 
-float PCFShadowCalculation(float4 position)
+float ShadowCalculation(float4 position, float3 normal, float3 light_direction)
 {
-	float shadow_value = 0.0;
-
-	// TODO: dynamic shadowmap size, now it's 4096
-	float2 texel_size = 1.0f / 4096.f;
-
-	float3 projected_coordinate;
-	projected_coordinate.x = position.x / position.w * 0.5 + 0.5;
-	projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
-	projected_coordinate.z = position.z / position.w;
-
-	float current_depth = projected_coordinate.z + 0.0015;
-
-	int pcf_size = 1;
-
-	for(int x = -pcf_size; x <= pcf_size; ++x)
+	if (position.w <= 0.0f)
 	{
-		for(int y = -pcf_size; y <= pcf_size; ++y)
-		{
-			float closest_depth = g_shadow_map.Sample(g_shadow_sampler, projected_coordinate.xy + float2(x, y) * texel_size).r;
-
-			shadow_value += current_depth + 0.001 > closest_depth ? 1.0 : 0.0;        
-		}    
+		return 0.0f;
 	}
 
-	shadow_value /= (2 * pcf_size + 1) * (2 * pcf_size + 1);
+	float3 projected_coordinate = position.xyz / position.w;
+	projected_coordinate.xy = projected_coordinate.xy * float2(0.5f, -0.5f) + 0.5f;
 
-	return shadow_value;
-}
+	const bool inside_shadow_map =
+		projected_coordinate.x >= 0.0f && projected_coordinate.x <= 1.0f &&
+		projected_coordinate.y >= 0.0f && projected_coordinate.y <= 1.0f;
 
-float ShadowCalculation(float4 position)
-{
-	float3 projected_coordinate;
-	projected_coordinate.x = position.x / position.w * 0.5 + 0.5;
-	projected_coordinate.y = -position.y / position.w * 0.5 + 0.5;
-	projected_coordinate.z = position.z / position.w;
+	if (!inside_shadow_map)
+	{
+		return 0.0f;
+	}
 
-	float closest_depth = g_shadow_map.Sample(g_shadow_sampler, projected_coordinate.xy);
+	uint shadow_width = 0;
+	uint shadow_height = 0;
+	g_shadow_map.GetDimensions(shadow_width, shadow_height);
 
-	float in_shadow = projected_coordinate.z - 0.0025f > closest_depth ? 1.0 : 0.0;  
+	if (shadow_width == 0 || shadow_height == 0)
+	{
+		return 0.0f;
+	}
 
-	return in_shadow;
+	const float2 texel_size = 1.0f / float2(shadow_width, shadow_height);
+	const float n_dot_l = saturate(dot(normalize(normal), normalize(light_direction)));
+	const float depth_bias = lerp(0.0035f, 0.0005f, n_dot_l);
+	const float receiver_depth = saturate(projected_coordinate.z) - depth_bias;
+
+	const float kernel[5] = { 1.0f, 4.0f, 6.0f, 4.0f, 1.0f };
+
+	float lit_visibility = 0.0f;
+	float weights_sum = 0.0f;
+
+	[unroll]
+	for (int x = -2; x <= 2; ++x)
+	{
+		[unroll]
+		for (int y = -2; y <= 2; ++y)
+		{
+			const float2 uv = projected_coordinate.xy + float2(x, y) * texel_size;
+			const float closest_depth = g_shadow_map.Sample(g_shadow_sampler, uv).r;
+			const float weight = kernel[x + 2] * kernel[y + 2];
+			weights_sum += weight;
+
+			// Standard depth map compare: receiver is shadowed if it is farther than the stored depth.
+			lit_visibility += (receiver_depth <= closest_depth ? 1.0f : 0.0f) * weight;
+		}
+	}
+
+	lit_visibility /= max(weights_sum, 0.00001f);
+
+	return 1.0f - lit_visibility;
 }
 
 float DistributionGGX(float3 N, float3 H, float roughness)
@@ -164,12 +178,12 @@ float4 main(RS2PS input) : SV_Target
 	const float3 N = normals;
 	const float3 V = normalize(camera.position.xyz - input.world_position.xyz);
 	const float3 R = reflect(-V, N); 
+	const float3 L = normalize(-scene_parameters.directional_light_direction.xyz);
 
 	const float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo.rgb, metalness); 
 
 	float3 directLighting = 0.0;
 	{
-		const float3 L = -scene_parameters.directional_light_direction.xyz;
 		const float3 H = normalize(V + L);
 		const float3 radiance = scene_parameters.directional_light_color.rgb * scene_parameters.directional_light_intensity;
 
@@ -215,7 +229,7 @@ float4 main(RS2PS input) : SV_Target
 		ambient_spec = spec * ibl_intensity;
 	}
 
-	const float shadow = scene_parameters.shadows_enabled ? ShadowCalculation(input.position_shadow_space) : 0.0f;
+	const float shadow = scene_parameters.shadows_enabled ? ShadowCalculation(input.position_shadow_space, N, L) : 0.0f;
 	const float direct_visibility = 1.0f - shadow;
 
 	float3 result = (ambient_diffuse + ambient_spec) * occlusion + directLighting * direct_visibility + emissive;
