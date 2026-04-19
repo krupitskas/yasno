@@ -6,6 +6,7 @@ RWTexture2D<float4> result_texture							: register(u0);
 RWTexture2D<float4> accumulation_texture					: register(u1);
 
 ConstantBuffer<CameraParameters> camera						: register(b0);
+ConstantBuffer<GpuSceneParameters> scene_parameters			: register(b1);
 
 RaytracingAccelerationStructure scene_bvh					: register(t0);
 StructuredBuffer<VertexLayout> vertex_buffer				: register(t1);
@@ -71,6 +72,49 @@ PTMaterialProperties LoadMaterialProperties(int material_id, float2 uv)
 	return result;
 }
 
+float DistributionGGX(float3 N, float3 H, float roughness)
+{
+	float a = roughness * roughness;
+	float a2 = a * a;
+	float NdotH = max(dot(N, H), 0.0f);
+	float NdotH2 = NdotH * NdotH;
+
+	float nom = a2;
+	float denom = (NdotH2 * (a2 - 1.0f) + 1.0f);
+	denom = PI * denom * denom;
+
+	return nom / max(denom, 0.00001f);
+}
+
+float3 FresnelSchlick(float cosTheta, float3 F0)
+{
+	return F0 + (1.0f - F0) * pow(saturate(1.0f - cosTheta), 5.0f);
+}
+
+float3 EvaluateDirectionalLight(float3 N, float3 V, float3 L, PTMaterialProperties material, float3 radiance)
+{
+	float roughness = clamp(material.roughness, 0.045f, 1.0f);
+	float metalness = clamp(material.metalness, 0.0f, 1.0f);
+	float3 albedo = material.base_color;
+
+	float3 H = normalize(V + L);
+	float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metalness);
+
+	float NDF = DistributionGGX(N, H, roughness);
+	float G = GeometrySmith(N, V, L, roughness);
+	float3 F = FresnelSchlick(max(dot(H, V), 0.0f), F0);
+
+	float3 numerator = NDF * G * F;
+	float denominator = 4.0f * max(dot(N, V), 0.0f) * max(dot(N, L), 0.0f) + 0.0001f;
+	float3 specular = numerator / denominator;
+
+	float3 kS = F;
+	float3 kD = (1.0f - kS) * (1.0f - metalness);
+	float NdotL = max(dot(N, L), 0.0f);
+
+	return (kD * albedo / PI + specular) * radiance * NdotL;
+}
+
 [shader("raygeneration")]
 void RayGen()
 {
@@ -95,13 +139,13 @@ void RayGen()
 	RayDesc ray;
 	ray.Origin = mul(camera.view_inverse, float4(0, 0, 0, 1));
 	float4 target = mul(camera.projection_inverse, float4(d.x, -d.y, 1, 1));
-	ray.Direction = mul(camera.view_inverse, float4(target.xyz, 0));
+	ray.Direction = normalize(mul(camera.view_inverse, float4(target.xyz, 0)).xyz);
 	ray.TMin = 0;
 	ray.TMax = 100000;
 
 	float3 radiance = float3(0.0f, 0.0f, 0.0f);
 	float3 throughput = float3(1.0f, 1.0f, 1.0f);
-	float3 sky_value = float3(10.0f, 10.0f, 10.0f);
+	float3 sky_value = float3(10.0f, 10.0f, 10.0f) * max(scene_parameters.ambient_light_intensity, 0.0f);
 
 	uint rng_state = InitRNG(LaunchIndex, LaunchDimensions, camera.frame_number);
 
@@ -147,6 +191,52 @@ void RayGen()
 		PTMaterialProperties material = LoadMaterialProperties(payload.material_id, payload.uvs);
 
 		radiance += throughput * material.emissive;
+
+		const float3 directional_light_dir = normalize(-scene_parameters.directional_light_direction.xyz);
+		const float3 directional_light_radiance =
+			scene_parameters.directional_light_color.xyz * scene_parameters.directional_light_intensity;
+
+		if (scene_parameters.directional_light_intensity > 0.0f)
+		{
+			const float NdotL = dot(shading_normal, directional_light_dir);
+			const float NgdotL = dot(geometry_normal, directional_light_dir);
+
+			if (NdotL > 0.0f && NgdotL > 0.0f)
+			{
+				RayDesc shadow_ray;
+				shadow_ray.Origin = OffsetRay(payload.hit_position, geometry_normal);
+				shadow_ray.Direction = directional_light_dir;
+				shadow_ray.TMin = 0.001f;
+				shadow_ray.TMax = 100000.0f;
+
+				RtxHitInfo shadow_payload;
+				shadow_payload.material_id = -1;
+				shadow_payload.encoded_normals = 0.0f;
+				shadow_payload.hit_position = 0.0f;
+				shadow_payload.uvs = 0.0f;
+
+				TraceRay(
+					scene_bvh,
+					RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+					0xFF,
+					0,
+					0,
+					0,
+					shadow_ray,
+					shadow_payload
+				);
+
+				if (!shadow_payload.has_hit())
+				{
+					radiance += throughput * EvaluateDirectionalLight(
+						shading_normal,
+						view_vec,
+						directional_light_dir,
+						material,
+						directional_light_radiance);
+				}
+			}
+		}
 
 		// Sample BRDF to generate the next ray
 		// First, figure out whether to sample diffuse or specular BRDF

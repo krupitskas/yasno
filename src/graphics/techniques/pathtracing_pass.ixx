@@ -289,7 +289,8 @@ export namespace ysn
 			uint32_t width,
 			uint32_t height,
 			wil::com_ptr<ID3D12Resource> scene_color,
-			wil::com_ptr<ID3D12Resource> camera_buffer);
+			wil::com_ptr<ID3D12Resource> camera_buffer,
+			wil::com_ptr<ID3D12Resource> scene_parameters_buffer);
 
 	private:
 		std::wstring m_raygen_shader_name = L"RayGen";
@@ -508,17 +509,18 @@ namespace ysn
 			CD3DX12_DESCRIPTOR_RANGE per_instance_data_srv(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4); // t4
 
 			// note(perf): order from most frequent to least frequent
-			std::array<CD3DX12_ROOT_PARAMETER, 8> root_parameters;
+			std::array<CD3DX12_ROOT_PARAMETER, 9> root_parameters;
 			root_parameters[0].InitAsDescriptorTable(1, &output_texture_uav);       // u0
 			root_parameters[1].InitAsDescriptorTable(1, &accumulation_texture_uav); // u1
 
-			root_parameters[2].InitAsConstantBufferView(0); // b0
+			root_parameters[2].InitAsConstantBufferView(0); // b0 camera
+			root_parameters[3].InitAsConstantBufferView(1); // b1 scene parameters
 
-			root_parameters[3].InitAsDescriptorTable(1, &scene_bvh_srv);         // t0
-			root_parameters[4].InitAsDescriptorTable(1, &vertex_buffer_srv);     // t1
-			root_parameters[5].InitAsDescriptorTable(1, &index_buffer_srv);      // t2
-			root_parameters[6].InitAsDescriptorTable(1, &material_buffer_srv);   // t3
-			root_parameters[7].InitAsDescriptorTable(1, &per_instance_data_srv); // t4
+			root_parameters[4].InitAsDescriptorTable(1, &scene_bvh_srv);         // t0
+			root_parameters[5].InitAsDescriptorTable(1, &vertex_buffer_srv);     // t1
+			root_parameters[6].InitAsDescriptorTable(1, &index_buffer_srv);      // t2
+			root_parameters[7].InitAsDescriptorTable(1, &material_buffer_srv);   // t3
+			root_parameters[8].InitAsDescriptorTable(1, &per_instance_data_srv); // t4
 
 			CD3DX12_ROOT_SIGNATURE_DESC global_root_sig_desc((UINT)root_parameters.size(), root_parameters.data());
 
@@ -671,7 +673,8 @@ namespace ysn
 		uint32_t width,
 		uint32_t height,
 		wil::com_ptr<ID3D12Resource> scene_color,
-		wil::com_ptr<ID3D12Resource> camera_buffer)
+		wil::com_ptr<ID3D12Resource> camera_buffer,
+		wil::com_ptr<ID3D12Resource> scene_parameters_buffer)
 	{
 		ID3D12DescriptorHeap* ppHeaps[] = {
 			renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr(),
@@ -689,13 +692,14 @@ namespace ysn
 		command_list->SetComputeRootDescriptorTable(1, accumulation_texture_srv.gpu);
 
 		command_list->SetComputeRootConstantBufferView(2, camera_buffer->GetGPUVirtualAddress());
+		command_list->SetComputeRootConstantBufferView(3, scene_parameters_buffer->GetGPUVirtualAddress());
 
-		command_list->SetComputeRootDescriptorTable(3, rtx_context.tlas_buffers.tlas_srv.gpu);
+		command_list->SetComputeRootDescriptorTable(4, rtx_context.tlas_buffers.tlas_srv.gpu);
 
-		command_list->SetComputeRootDescriptorTable(4, m_vertex_buffer_srv.gpu);
-		command_list->SetComputeRootDescriptorTable(5, m_indices_buffer_srv.gpu);
-		command_list->SetComputeRootDescriptorTable(6, m_materials_buffer_srv.gpu);
-		command_list->SetComputeRootDescriptorTable(7, m_per_instance_data_buffer_srv.gpu);
+		command_list->SetComputeRootDescriptorTable(5, m_vertex_buffer_srv.gpu);
+		command_list->SetComputeRootDescriptorTable(6, m_indices_buffer_srv.gpu);
+		command_list->SetComputeRootDescriptorTable(7, m_materials_buffer_srv.gpu);
+		command_list->SetComputeRootDescriptorTable(8, m_per_instance_data_buffer_srv.gpu);
 
 		D3D12_DISPATCH_RAYS_DESC desc = {};
 		desc.HitGroupTable.StartAddress = m_hit_group_shader_table.GPUVirtualAddress();

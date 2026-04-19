@@ -482,7 +482,7 @@ namespace ysn
 
 		{
 			LoadingParameters loading_parameters;
-			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 
 		{
@@ -492,8 +492,8 @@ namespace ysn
 
 		{
 			LoadingParameters loading_parameters;
-			//loading_parameters.model_modifier = XMMatrixScaling(0.01f, 0.01f, 0.01f);
-			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
+			loading_parameters.model_modifier = XMMatrixScaling(0.1f, 0.1f, 0.1f);
+			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Bistro/Bistro.gltf"), loading_parameters);
 		}
 
 		//{
@@ -1284,7 +1284,7 @@ namespace ysn
 				m_shadow_pass.UpdateLight(m_render_scene.directional_light);
 
 				ImGui::InputFloat("Intensity", &m_render_scene.directional_light.intensity, 0.0f, 1000.0f);
-				ImGui::InputFloat("Env Light Intensity", &m_render_scene.environment_light.intensity, 0.0f, 1000.0f);
+				ImGui::InputFloat("Ambient Light Intensity", &m_render_scene.environment_light.intensity, 0.0f, 1000.0f);
 
 				{
 					const char* items[] = {
@@ -1561,7 +1561,8 @@ namespace ysn
 				GetClientWidth(),
 				GetClientHeight(),
 				m_scene_color_buffer,
-				m_camera_gpu_buffer);
+				m_camera_gpu_buffer,
+				m_scene_parameters_gpu_buffer);
 
 			command_queue->CloseCommandList(command_list);
 		}
