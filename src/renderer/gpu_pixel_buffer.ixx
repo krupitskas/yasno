@@ -26,15 +26,16 @@ export namespace ysn
 		void GenerateRTVs()
 		{
 			auto renderer = Application::Get().GetRenderer();
+			const auto resource_desc = m_resource->GetDesc();
 
-			for(int mip = 0; mip < m_resource->GetDesc().MipLevels; mip++)
+			for (int mip = 0; mip < resource_desc.MipLevels; mip++)
 			{
 				std::array<DescriptorHandle, 6> faces;
 
 				for (int face = 0; face < 6; face++)
 				{
 					D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
-					rtv_desc.Format = Application::Get().GetRenderer()->GetHdrFormat();
+					rtv_desc.Format = resource_desc.Format;
 					rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
 					rtv_desc.Texture2DArray.MipSlice = mip;
 					rtv_desc.Texture2DArray.FirstArraySlice = face;
@@ -50,10 +51,10 @@ export namespace ysn
 			{
 				D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 				srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-				srv_desc.Format = renderer->GetHdrFormat();
+				srv_desc.Format = resource_desc.Format;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 				srv_desc.TextureCube.MostDetailedMip = 0;
-				srv_desc.TextureCube.MipLevels = 1;
+				srv_desc.TextureCube.MipLevels = resource_desc.MipLevels;
 				srv_desc.TextureCube.ResourceMinLODClamp = 0.0f;
 
 				srv = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();

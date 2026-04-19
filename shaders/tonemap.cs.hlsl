@@ -19,7 +19,7 @@ float3 ACESFilm(float3 x)
 [numthreads(8, 8, 1)]
 void main(uint3 threadId : SV_DispatchThreadID)
 {
-	if(threadId.x > parameters.display_width || threadId.y > parameters.display_height)
+	if(threadId.x >= parameters.display_width || threadId.y >= parameters.display_height)
 		return;
 
 	const float gamma = 2.2;

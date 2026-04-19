@@ -15,12 +15,15 @@ int WINAPI wWinMain(_In_ HINSTANCE hinstance, _In_opt_ HINSTANCE, _In_ LPWSTR, _
 	ysn::Application::Create(hinstance);
 	auto window = ysn::Application::Get().CreateRenderWindow(L"Yasno", 1920, 1080, false);
 
-	auto yasno_core = std::make_shared<ysn::Yasno>(L"Yasno", 1920, 1080);
-	yasno_core->SetWindow(window);
-	window->RegisterCallbacks(yasno_core);
-	window->Show();
+	int ret_code = 0;
+	{
+		auto yasno_core = std::make_shared<ysn::Yasno>(L"Yasno", 1920, 1080);
+		yasno_core->SetWindow(window);
+		window->RegisterCallbacks(yasno_core);
+		window->Show();
 
-	int ret_code = ysn::Application::Get().Run(yasno_core);
+		ret_code = ysn::Application::Get().Run(yasno_core);
+	}
 
 	ysn::Application::Get().DestroyWindow(window);
 	ysn::Application::Destroy();

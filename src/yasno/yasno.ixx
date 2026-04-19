@@ -137,6 +137,7 @@ export namespace ysn
 		bool m_is_first_frame = true;
 		bool m_reset_rtx_accumulation = true;
 		bool m_is_rtx_accumulation_enabled = false;
+		uint32_t m_pathtracing_frame_number = 0;
 
 		// Techniques
 		ForwardPass m_forward_pass;
@@ -344,7 +345,7 @@ namespace ysn
 		camera_data->view_inverse = XMMatrixInverse(nullptr, m_render_scene.camera->GetViewMatrix());
 		camera_data->projection_inverse = XMMatrixInverse(nullptr, m_render_scene.camera->GetProjectionMatrix());
 		camera_data->position = m_render_scene.camera->GetPosition();
-		camera_data->frame_number = m_frame_number;
+		camera_data->frame_number = m_pathtracing_frame_number;
 		camera_data->rtx_frames_accumulated = m_rtx_frames_accumulated;
 		camera_data->reset_accumulation = m_reset_rtx_accumulation ? 1 : 0;
 		camera_data->accumulation_enabled = m_is_rtx_accumulation_enabled ? 1 : 0;
@@ -480,12 +481,12 @@ namespace ysn
 
 		{
 			LoadingParameters loading_parameters;
-			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
+			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/Sponza/Sponza.gltf"), loading_parameters);
 		}
 
 		{
 			LoadingParameters loading_parameters;
-			//load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
+			load_result = LoadGltfFromFile(m_render_scene, VfsPath(L"assets/DamagedHelmet/DamagedHelmet.gltf"), loading_parameters);
 		}
 
 		{
@@ -1716,5 +1717,6 @@ namespace ysn
 
 		m_is_first_frame = false;
 		m_reset_rtx_accumulation = false;
+		m_pathtracing_frame_number += 1;
 	}
 }

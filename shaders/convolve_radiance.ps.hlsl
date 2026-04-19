@@ -82,14 +82,12 @@ float3 tangentToWorld(const float3 v, const float3 N, const float3 S, const floa
 
 float4 main(PixelShaderInput IN) : SV_Target
 {
-	uint MAX_MIPS = 8;
-
 	const float inputWidth = 512;
 	const float inputHeight = 512;
 
 	// Solid angle associated with a single cubemap texel at zero mipmap level.
 	// This will come in handy for importance sampling below.
-	float wt = 4.0 * PI / (MAX_MIPS * inputWidth * inputHeight);
+	float wt = 4.0 * PI / (6.0 * inputWidth * inputHeight);
 	
 	// Approximation: Assume zero viewing angle (isotropic reflections).
 	const float3 N = normalize(IN.LocalPosition) * float3(1, 1, -1); // TODO(LH to RH): Somewhere this is lost

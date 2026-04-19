@@ -45,7 +45,7 @@ float ShlickPhaseFunction(float VdotL, float g)
 [numthreads(VolumetricFogDispatchX, VolumetricFogDispatchY, VolumetricFogDispatchZ)]
 void main(uint3 threadId : SV_DispatchThreadID)
 {
-	if(threadId.x > fog_parameters.display_width || threadId.y > fog_parameters.display_height)
+	if(threadId.x >= fog_parameters.display_width || threadId.y >= fog_parameters.display_height)
 	{
 		return;
 	}
@@ -109,17 +109,25 @@ void main(uint3 threadId : SV_DispatchThreadID)
 		projected_coordinate.y = -ray_pos_shadow_space.y / ray_pos_shadow_space.w * 0.5 + 0.5;
 		projected_coordinate.z = ray_pos_shadow_space.z / ray_pos_shadow_space.w;
 
-		int2 texel_coords = int2(projected_coordinate.xy * float2(shadow_dim, shadow_dim));
+		float light_visibility = 1.0f;
 
-		const float shadow_depth = ShadowMapTexture.Load(int3(texel_coords, 0)).r;
+		const bool inside_shadow_map =
+			projected_coordinate.x >= 0.0f && projected_coordinate.x <= 1.0f &&
+			projected_coordinate.y >= 0.0f && projected_coordinate.y <= 1.0f;
 
-		float fragment_depth = projected_coordinate.z;
+		if (inside_shadow_map)
+		{
+			int2 texel_coords = int2(projected_coordinate.xy * float2(shadow_dim, shadow_dim));
+			texel_coords = clamp(texel_coords, int2(0, 0), int2(shadow_dim - 1, shadow_dim - 1));
 
-		float bias = 0.01;
-		bool in_shadow = fragment_depth - bias > shadow_depth;
+			const float shadow_depth = ShadowMapTexture.Load(int3(texel_coords, 0)).r;
+			const float fragment_depth = projected_coordinate.z;
+			const float bias = 0.01f;
+			const bool in_shadow = fragment_depth - bias > shadow_depth;
 
-		// Light attenuation (shadowing)
-		float light_visibility = in_shadow ? 1.0 : 0.0;
+			// If sample point is in shadow, directional light contribution should be blocked.
+			light_visibility = in_shadow ? 0.0f : 1.0f;
+		}
 
 		// Accumulate fog density and light contribution
 		float step_transmittance = exp(-density * ray_step_size);

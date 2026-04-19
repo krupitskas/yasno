@@ -137,6 +137,9 @@ float4 main(RS2PS input) : SV_Target
 		roughness *= metallicRoughnessResult.g;
 	}
 
+	roughness = clamp(roughness, 0.045f, 1.0f);
+	metalness = clamp(metalness, 0.0f, 1.0f);
+
 	if (pbr_material.texture_enable_bitmask & (1 << NORMAL_ENABLED_BIT))
 	{
 		Texture2D normal_texture = ResourceDescriptorHeap[pbr_material.normal_texture_index];
@@ -149,7 +152,7 @@ float4 main(RS2PS input) : SV_Target
 	if (pbr_material.texture_enable_bitmask & (1 << OCCLUSION_ENABLED_BIT))
 	{
 		Texture2D occlusion_texture = ResourceDescriptorHeap[pbr_material.occlusion_texture_index];
-		occlusion = occlusion_texture.Sample(g_linear_sampler, uv);
+		occlusion = occlusion_texture.Sample(g_linear_sampler, uv).r;
 	}
 
 	if (pbr_material.texture_enable_bitmask & (1 << EMISSIVE_ENABLED_BIT))
@@ -162,7 +165,7 @@ float4 main(RS2PS input) : SV_Target
 	const float3 V = normalize(camera.position.xyz - input.world_position.xyz);
 	const float3 R = reflect(-V, N); 
 
-	const float3 F0 = lerp(0.04, albedo, metalness); 
+	const float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo.rgb, metalness); 
 
 	float3 directLighting = 0.0;
 	{
@@ -185,11 +188,12 @@ float4 main(RS2PS input) : SV_Target
       
 		float NdotL = max(dot(N, L), 0.0);        
 
-		directLighting += (kD * albedo / PI + spec) * radiance * NdotL;
+		directLighting += (kD * albedo.rgb / PI + spec) * radiance * NdotL;
 	}
 
 	float3 ambient_diffuse = 0.0;
 	float3 ambient_spec = 0.0;
+	const float ibl_intensity = scene_parameters.ambient_light_intensity;
 
 	{
 	    float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
@@ -201,19 +205,20 @@ float4 main(RS2PS input) : SV_Target
 		float3 irradiance	= g_input_irradiance.SampleLevel(g_linear_sampler, N, 0).rgb;
 		float3 diffuse      = irradiance * albedo.rgb;
 
-		const float MAX_REFLECTION_LOD = 8.0; // TODO: task provide
+		const float MAX_REFLECTION_LOD = 7.0;
 
 		float3 prefilteredColor = g_input_radiance.SampleLevel(g_linear_sampler, R, roughness * MAX_REFLECTION_LOD).rgb;    
 		float2 brdf  = g_input_brdf.SampleLevel(g_linear_sampler, float2(max(dot(N, V), 0.0), roughness), 0).rg;
 		float3 spec = prefilteredColor * (F * brdf.x + brdf.y);
 
-		ambient_diffuse = kD * diffuse;
-		ambient_spec = spec;
+		ambient_diffuse = kD * diffuse * ibl_intensity;
+		ambient_spec = spec * ibl_intensity;
 	}
 
-	const float shadow_modifier = scene_parameters.shadows_enabled ? ShadowCalculation(input.position_shadow_space) : 1.0f;
+	const float shadow = scene_parameters.shadows_enabled ? ShadowCalculation(input.position_shadow_space) : 0.0f;
+	const float direct_visibility = 1.0f - shadow;
 
-	float3 result = (ambient_diffuse + ambient_spec) * occlusion * shadow_modifier + emissive + ambient_diffuse * 0.1; // + directLighting
+	float3 result = (ambient_diffuse + ambient_spec) * occlusion + directLighting * direct_visibility + emissive;
 
 	return float4(result, 1.0);
 }

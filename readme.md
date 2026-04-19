@@ -17,7 +17,7 @@ Yasno has two modes - raster and RTX pathtracing.
  
 ### Current Features
 
-* GLTF format loading
+* GLTF loading
 * Forward raster direct and indirect
 * RTX pathtracing with temporal accumulation
 * Tonemapping
@@ -25,7 +25,7 @@ Yasno has two modes - raster and RTX pathtracing.
 * Single packed material, vertex, indices buffer
 * Shaders hot reloading
 * CSM with PCF
-* Imgui and Imguizmo
+* Imgui and Imguizmo integration
 
 ### Get Started
 

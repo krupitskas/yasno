@@ -55,7 +55,9 @@ export namespace ysn
 
 		// Split Sum BRDF texture
 		wil::com_ptr<ID3D12Resource> m_brdf_texture;
-		DescriptorHandle m_brdf_handle;
+		DescriptorHandle m_brdf_uav_handle;
+		DescriptorHandle m_brdf_srv_handle;
+		D3D12_RESOURCE_STATES m_brdf_texture_state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 		const uint32_t m_brdf_texture_size = 512;
 	};
 }
@@ -160,10 +162,30 @@ namespace ysn
 		ID3D12DescriptorHeap* ppHeaps[] = { renderer->GetCbvSrvUavDescriptorHeap()->GetHeapPtr() };
 		command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-		command_list->SetComputeRootDescriptorTable(0, m_brdf_handle.gpu);
+		if (m_brdf_texture_state != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		{
+			CD3DX12_RESOURCE_BARRIER to_uav = CD3DX12_RESOURCE_BARRIER::Transition(
+				m_brdf_texture.get(), m_brdf_texture_state, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			command_list->ResourceBarrier(1, &to_uav);
+			m_brdf_texture_state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		}
+
+		command_list->SetComputeRootDescriptorTable(0, m_brdf_uav_handle.gpu);
 
 		command_list->Dispatch(
 			UINT(std::ceil(m_brdf_texture_size / (float)8)), UINT(std::ceil(m_brdf_texture_size / (float)8)), 1);
+
+		{
+			CD3DX12_RESOURCE_BARRIER uav_barrier = CD3DX12_RESOURCE_BARRIER::UAV(m_brdf_texture.get());
+			command_list->ResourceBarrier(1, &uav_barrier);
+		}
+
+		{
+			CD3DX12_RESOURCE_BARRIER to_srv = CD3DX12_RESOURCE_BARRIER::Transition(
+				m_brdf_texture.get(), m_brdf_texture_state, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+			command_list->ResourceBarrier(1, &to_srv);
+			m_brdf_texture_state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+		}
 
 		renderer->GetDirectQueue()->CloseCommandList(command_list);
 
@@ -265,14 +287,27 @@ namespace ysn
 
 		m_brdf_texture->SetName(L"BRDF Texture");
 
-		m_brdf_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+		m_brdf_uav_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
 
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R16G16_FLOAT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 
-			renderer->GetDevice()->CreateUnorderedAccessView(m_brdf_texture.get(), nullptr, &uav_desc, m_brdf_handle.cpu);
+			renderer->GetDevice()->CreateUnorderedAccessView(m_brdf_texture.get(), nullptr, &uav_desc, m_brdf_uav_handle.cpu);
+		}
+
+		m_brdf_srv_handle = renderer->GetCbvSrvUavDescriptorHeap()->GetNewHandle();
+
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.Format = DXGI_FORMAT_R16G16_FLOAT;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = 1;
+			srv_desc.Texture2D.MostDetailedMip = 0;
+
+			renderer->GetDevice()->CreateShaderResourceView(m_brdf_texture.get(), &srv_desc, m_brdf_srv_handle.cpu);
 		}
 
 		CD3DX12_DESCRIPTOR_RANGE brdf_texture_uav(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, 0);
@@ -509,6 +544,6 @@ namespace ysn
 
 	DescriptorHandle ConvolveCubemap::GetBrdfTextureHandle() const
 	{
-		return m_brdf_handle;
+		return m_brdf_srv_handle;
 	}
 }
